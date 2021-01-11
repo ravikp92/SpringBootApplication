@@ -1,17 +1,24 @@
 package com.ravi.boot.PatientApplication.model;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityListeners;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
+import org.hibernate.validator.constraints.Range;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.ravi.boot.PatientApplication.audit.Auditable;
@@ -21,7 +28,7 @@ import io.swagger.annotations.ApiModel;
 @Table(name ="Patient")
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@ApiModel(value="This is patient clas")
+@ApiModel(value="This is patient class")
 public class Patient extends Auditable<String>  {
 
 	
@@ -29,15 +36,24 @@ public class Patient extends Auditable<String>  {
 	@GeneratedValue(strategy=GenerationType.AUTO)
 	@Column(name="patientId")
 	private long id ;
+	
+	
 	@Column(name="name")
+	@Size(max = 20, min = 3, message = "{patient.name.invalid}")
+	@NotEmpty(message = "Name must not be empty")
 	private String name;
+	
 	@Column(name="age")
+	@NotEmpty(message = "Age must not be empty")
+	@Range(min=18, max=55)
 	private int age;
+	
 	@Column(name="address")
 	private String address;
 	
-	@OneToMany(mappedBy="patient")
-	private Set<MedicalHistory> medicalHistories;
+	@OneToMany(cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY,mappedBy="patient")
+	private Set<MedicalHistory> medicalHistories =new HashSet<MedicalHistory>();
 
 	public Patient() {
 	}

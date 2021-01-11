@@ -2,13 +2,17 @@ package com.ravi.boot.PatientApplication.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ravi.boot.PatientApplication.exception.ResourceNotFoundException;
 import com.ravi.boot.PatientApplication.model.AuthenticationRequest;
 import com.ravi.boot.PatientApplication.model.AuthenticationResponse;
 import com.ravi.boot.PatientApplication.model.MedicalHistory;
@@ -30,7 +35,9 @@ import com.ravi.boot.PatientApplication.util.JwtUtil;
 
 @RestController
 public class PatientController {
-
+	
+	private static final Logger logger=LoggerFactory.getLogger(PatientController.class);
+	
 	// autowire the PatientService class
 	@Autowired
 	private PatientService patientService;
@@ -50,16 +57,20 @@ public class PatientController {
 	//Spring security authenticate method for generation of JWT
 	@RequestMapping(value="/authenticate",method=RequestMethod.POST)
 	public ResponseEntity<?> createAuthenticationToken(@RequestBody AuthenticationRequest authenticationRequest) throws Exception{
+		logger.debug("Authenticating....");
+		
 		try{
 			authenticationManager.authenticate(
 				new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), 
 							authenticationRequest.getPassword()));
 		}
 		catch(BadCredentialsException e) {
-			throw new Exception("Incorrect username and password : ",e);
+			logger.error("Not authenticated...");
+			throw new ResourceNotFoundException("Incorrect username and password : "+e.getLocalizedMessage());
 		}
 		final UserDetails userDetails=userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
 		final String jwt=jwtUtil.generateToken(userDetails);
+		logger.debug("Authenticated...");		
 		return ResponseEntity.ok(new AuthenticationResponse(jwt));
 	}
 	
@@ -73,8 +84,12 @@ public class PatientController {
 
 	// creating a get mapping that retrieves the detail of a specific patient
 	@GetMapping("/api/patients/{patientId}")
-	private Patient getPatients(@PathVariable("patientId") long patientId) {
-		return patientService.getPatientById(patientId);
+	private ResponseEntity<Patient> getPatients(@PathVariable("patientId") long patientId) {
+		Patient patient = patientService.getPatientById(patientId);
+	    if(patient == null) {
+	         throw new ResourceNotFoundException("Invalid patient id : " + patientId);
+	    }
+	    return new ResponseEntity<Patient>(patient, HttpStatus.OK);
 	}
 
 	// creating a get mapping that retrieves the detail of a specific patient
@@ -99,9 +114,9 @@ public class PatientController {
 
 	// creating post mapping that post the patient detail in the database
 	@PostMapping("/api/patients")
-	private long savePatient(@RequestBody Patient patient) {
-		patientService.saveOrUpdate(patient);
-		return patient.getId();
+	private ResponseEntity<Patient> savePatient(@RequestBody Patient patient) {
+		Patient savedPatient = patientService.save(patient);
+		return new ResponseEntity<Patient>(savedPatient, HttpStatus.OK);
 	}
 
 	// creating put mapping that updates the patient detail

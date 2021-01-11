@@ -5,12 +5,15 @@ import java.time.LocalDate;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityListeners;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.validation.constraints.Future;
+import javax.validation.constraints.FutureOrPresent;
 
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -31,11 +34,13 @@ public class MedicalHistory extends Auditable<String> {
 	@Column(name="diseaseName")
 	private String diseaseName;
 	@Column(name="fromDate")
+	@FutureOrPresent
 	private LocalDate fromDate;
 	@Column(name="ToDate")
+	@Future
 	private LocalDate ToDate;
 	
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name="patientId", nullable=false)
 	private Patient patient;
 	
